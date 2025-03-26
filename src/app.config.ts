@@ -1,7 +1,7 @@
-import config from "public/config.json";
+import config from 'public/config.json';
 
 const AppConfig = {
-    ...config
+    ...config,
 };
 
 export default AppConfig;

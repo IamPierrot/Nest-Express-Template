@@ -1,4 +1,9 @@
-import { MiddlewareConsumer, Module, NestModule, forwardRef } from '@nestjs/common';
+import {
+    MiddlewareConsumer,
+    Module,
+    NestModule,
+    forwardRef,
+} from '@nestjs/common';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import ModuleReflection from './utils/ModuleReflection';
@@ -16,12 +21,12 @@ import AppConfig from './app.config';
         CacheModule.registerAsync({
             isGlobal: true, // This ensures the module is available globally
             useFactory: () => ({
-                store: process.env.REDIS_URL ? 
-                    redisStore({ 
-                        url: process.env.REDIS_URL,
-                        ttl: 60 * 60 // 1 hour default TTL
-                    }) : 
-                    'memory',
+                store: process.env.REDIS_URL
+                    ? redisStore({
+                          url: process.env.REDIS_URL,
+                          ttl: 60 * 60, // 1 hour default TTL
+                      })
+                    : 'memory',
                 max: 100, // maximum number of items in cache when using memory store
                 ttl: 60 * 60 * 1000, // 1 hour in milliseconds
             }),
@@ -38,7 +43,7 @@ export class AppModule implements NestModule {
         if (AppConfig.app.useLogger) {
             consumer.apply(RequestLoggerMiddleware).forRoutes('*');
         }
-        
+
         consumer
             .apply(this.rateLimitService.getMiddleware())
             .exclude('health')

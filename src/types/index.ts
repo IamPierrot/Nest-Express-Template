@@ -1,4 +1,5 @@
 export * from './logger';
+export * from './format-response';
 
 // #region Array prototype
 Array.prototype.getRandom = function <T>(): T | undefined {

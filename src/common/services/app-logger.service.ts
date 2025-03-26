@@ -14,7 +14,7 @@ export class AppLoggerService {
 
     constructor() {
         this.defaultLogger = new ConsoleLogger('Application', {
-            prefix: AppConfig.app.consolePrefix
+            prefix: AppConfig.app.consolePrefix,
         });
     }
 

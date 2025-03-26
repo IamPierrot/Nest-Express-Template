@@ -63,9 +63,9 @@ interface Number {
 
 namespace NodeJS {
     interface ProcessEnv {
-        "API_KEY"?: string
-        "SECRET_KEY"?: string
-        "PG_URL": string
-        "REDIS_URL"?: string
+        API_KEY?: string;
+        SECRET_KEY?: string;
+        PG_URL: string;
+        REDIS_URL?: string;
     }
 }

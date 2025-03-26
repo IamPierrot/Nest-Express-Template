@@ -13,7 +13,7 @@ import AppConfig from 'src/app.config';
 
 const defaultOptions: RequestLoggerOptions = {
     headerName: 'X-Request-ID',
-    excludePaths: ['/health', '/metrics'],
+    excludePaths: ['/metrics'],
     sensitiveHeaders: ['authorization', 'cookie', 'set-cookie'],
     sensitiveParams: ['password', 'token', 'secret', 'key'],
     maskText: '[REDACTED]',
@@ -35,9 +35,11 @@ export class RequestLoggerMiddleware implements NestMiddleware {
         options?: RequestLoggerOptions,
     ) {
         this.options = { ...defaultOptions, ...options };
-        this.logger = options?.loggerService || new ConsoleLogger('HTTP', {
-            prefix: AppConfig.app.consolePrefix
-        });
+        this.logger =
+            options?.loggerService ||
+            new ConsoleLogger('HTTP', {
+                prefix: AppConfig.app.consolePrefix,
+            });
 
         setInterval(() => this.reportMetrics(), 60000);
     }
@@ -94,8 +96,7 @@ export class RequestLoggerMiddleware implements NestMiddleware {
         if (
             excludePaths?.some(
                 (path) =>
-                    req.path.includes(path) ||
-                    req.originalUrl.includes(path),
+                    req.path.includes(path) || req.originalUrl.includes(path),
             )
         ) {
             return true;

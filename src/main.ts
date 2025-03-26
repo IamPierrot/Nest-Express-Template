@@ -11,9 +11,10 @@ import './types';
 import ApiKeyGuard from './common/guards/api-key.guard';
 import { config } from 'dotenv';
 import AppConfig from './app.config';
+import FormatResponseInterceptor from './common/interceptors/response-format.interceptor';
 async function bootstrap() {
     setUpEnvironment();
-    
+
     const app = await NestFactory.create<NestExpressApplication>(AppModule, {
         bufferLogs: true,
         logger: new ConsoleLogger({
@@ -28,12 +29,15 @@ async function bootstrap() {
     if (AppConfig.app.useCors) {
         setupMiddleware(app);
     }
-    
-    setupGlobalPipes(app);
-    setupGracefulShutdown(app, logger);
-    setupGlobalGuards(app, moduleRef);
 
-    if (AppConfig.app.API_PREFIX) app.setGlobalPrefix(AppConfig.app.API_PREFIX);
+    setupGracefulShutdown(app, logger);
+
+    setupGlobalPipes(app, moduleRef);
+    setupGlobalGuards(app, moduleRef);
+    setupGlobalInterceptors(app, moduleRef);
+
+    if (AppConfig.app?.API_PREFIX)
+        app.setGlobalPrefix(AppConfig.app.API_PREFIX);
 
     const port = process.env.PORT || 3000;
     await app.listen(port);
@@ -49,7 +53,7 @@ function setupMiddleware(app: INestApplication) {
     });
 }
 
-function setupGlobalPipes(app: INestApplication) {
+function setupGlobalPipes(app: INestApplication, moduleRef: ModuleRef) {
     app.useGlobalPipes(
         new ValidationPipe({
             whitelist: true,
@@ -63,6 +67,13 @@ function setupGlobalPipes(app: INestApplication) {
 function setupGlobalGuards(app: INestApplication, moduleRef: ModuleRef) {
     const apiKeyGuard = moduleRef.get(ApiKeyGuard, { strict: false });
     app.useGlobalGuards(apiKeyGuard);
+}
+
+function setupGlobalInterceptors(app: INestApplication, moduleRef: ModuleRef) {
+    const formatResponseInterceptor = moduleRef.get(FormatResponseInterceptor, {
+        strict: false,
+    });
+    app.useGlobalInterceptors(formatResponseInterceptor);
 }
 
 function setupGracefulShutdown(
@@ -92,8 +103,8 @@ function setupGracefulShutdown(
     });
 }
 
-function setUpEnvironment() { 
-    // Load environment variables from .env file in all environments 
+function setUpEnvironment() {
+    // Load environment variables from .env file in all environments
     // but give precedence to system environment variables
     config();
 }
