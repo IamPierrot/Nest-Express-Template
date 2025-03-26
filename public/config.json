@@ -1,5 +1,8 @@
 {
     "app": {
-        "consolePrefix": "ANIMAL PARTY"
+        "consolePrefix": "ANIMAL PARTY",
+        "useCors": true,
+        "API_PREFIX": "",
+        "useLogger": true
     }
 }
