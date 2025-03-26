@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "builder": "swc",
+    "assets": ["public/**/*.json", "public/**/*.ico", "public/**/*.png", "public/**/*.jpg", "public/**/*.jpeg", "public/**/*.gif", "public/**/*.svg", "public/**/*.eot", "public/**/*.otf", "public/**/*.ttf", "public/**/*.woff", "public/**/*.woff2", "public/**/*.css", "public/**/*.js"]
+  }
+}
