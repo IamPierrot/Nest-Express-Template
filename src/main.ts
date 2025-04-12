@@ -12,6 +12,8 @@ import ApiKeyGuard from './common/guards/api-key.guard';
 import { config } from 'dotenv';
 import AppConfig from './app.config';
 import FormatResponseInterceptor from './common/interceptors/response-format.interceptor';
+import { RequestLoggerInterceptor } from './common/interceptors/request-logger.interceptor';
+
 async function bootstrap() {
     setUpEnvironment();
 
@@ -73,7 +75,10 @@ function setupGlobalInterceptors(app: INestApplication, moduleRef: ModuleRef) {
     const formatResponseInterceptor = moduleRef.get(FormatResponseInterceptor, {
         strict: false,
     });
-    app.useGlobalInterceptors(formatResponseInterceptor);
+    const requestLoggerInterceptor = moduleRef.get(RequestLoggerInterceptor, {
+        strict: false,
+    });
+    app.useGlobalInterceptors(formatResponseInterceptor, requestLoggerInterceptor);
 }
 
 function setupGracefulShutdown(

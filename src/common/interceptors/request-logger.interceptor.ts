@@ -1,13 +1,19 @@
 import {
+    CallHandler,
+    ExecutionContext,
     Injectable,
-    NestMiddleware,
+    NestInterceptor,
+    Logger,
     LoggerService,
     Optional,
     Inject,
     ConsoleLogger,
+    Global,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { randomUUID } from 'crypto';
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { RequestData, RequestLoggerOptions } from '../../types/logger';
 import AppConfig from 'src/app.config';
 
@@ -23,8 +29,9 @@ const defaultOptions: RequestLoggerOptions = {
     maxBodyLength: 1000,
 };
 
+@Global()
 @Injectable()
-export class RequestLoggerMiddleware implements NestMiddleware {
+export class RequestLoggerInterceptor implements NestInterceptor {
     private readonly options: RequestLoggerOptions;
     private readonly logger: LoggerService;
     private readonly metricsMap = new Map<string, number[]>();
@@ -44,50 +51,49 @@ export class RequestLoggerMiddleware implements NestMiddleware {
         setInterval(() => this.reportMetrics(), 60000);
     }
 
-    use(req: Request, res: Response, next: NextFunction): void {
-        try {
-            if (this.shouldSkip(req)) {
-                return next();
-            }
+    intercept(context: ExecutionContext, next: CallHandler): Observable<void> {
+        const req = context.switchToHttp().getRequest<Request>();
+        const res = context.switchToHttp().getResponse<Response>();
 
-            const requestId = this.getOrGenerateRequestId(req);
-            const requestData = this.captureRequestData(req, requestId);
-
-            const startTime = process.hrtime();
-
-            this.logRequest(requestData);
-
-            const originalEnd = res.end;
-
-            res.end = (...args: any[]) => {
-                res.end = originalEnd;
-                const result = originalEnd.apply(res, args);
-
-                this.logResponse(res, requestData, process.hrtime(startTime));
-
-                this.trackRequestMetrics(
-                    req.method,
-                    req.path,
-                    process.hrtime(startTime),
-                );
-
-                return result;
-            };
-
-            /// Remove headers that may expose sensitive information
-            res.header('X-Powered-By', 'Animal-Party-Engine');
-            res.removeHeader('Access-Control-Allow-Origin');
-            res.removeHeader('Access-Control-Allow-Credentials');
-            res.removeHeader('Access-Control-Allow-Methods');
-            res.set('ETag', 'Toi yeu em');
-
-            next();
-        } catch (error) {
-            this.logger.error(
-                `Error in RequestLogger middleware: ${error instanceof Error ? error.message : String(error)}`,
-            );
-            next();
+        // Skip logging for excluded paths
+        if (this.shouldSkip(req)) {
+            return next.handle();
         }
+
+        // Add request ID
+        const requestId = this.getOrGenerateRequestId(req);
+        
+        // Capture request data
+        const requestData = this.captureRequestData(req, requestId);
+        
+        // Log request
+        this.logRequest(requestData);
+        
+        // Set custom headers
+        res.set('X-Powered-By', 'Animal-Party-Engine');
+        res.set('ETag', 'Toi yeu em');
+        
+        // Remove sensitive headers
+        res.removeHeader('Access-Control-Allow-Origin');
+        res.removeHeader('Access-Control-Allow-Credentials');
+        res.removeHeader('Access-Control-Allow-Methods');
+
+        const startTime = process.hrtime();
+
+        return next.handle().pipe(
+            tap({
+                next: () => {
+                    const duration = process.hrtime(startTime);
+                    this.logResponse(res, requestData, duration);
+                    this.trackRequestMetrics(req.method, req.path, duration);
+                },
+                error: (error) => {
+                    const duration = process.hrtime(startTime);
+                    this.logResponse(res, requestData, duration, error);
+                    this.trackRequestMetrics(req.method, req.path, duration);
+                },
+            }),
+        );
     }
 
     private shouldSkip(req: Request): boolean {
@@ -220,13 +226,15 @@ export class RequestLoggerMiddleware implements NestMiddleware {
             }
         }
     }
+
     private logResponse(
         res: Response,
         requestData: RequestData,
         hrDuration: [number, number],
+        error?: Error,
     ): void {
         const { requestId, method, originalUrl } = requestData;
-        const { statusCode } = res;
+        const statusCode = res.statusCode;
         const contentLength = res.get('content-length') || 0;
 
         const durationMs = (
@@ -236,8 +244,8 @@ export class RequestLoggerMiddleware implements NestMiddleware {
 
         const logMessage = `[${requestId}] ${method} ${originalUrl} ${statusCode} ${contentLength}B - ${durationMs}ms`;
 
-        if (statusCode >= 500) {
-            this.logger.error(logMessage);
+        if (error || statusCode >= 500) {
+            this.logger.error(logMessage, error?.stack);
         } else if (statusCode >= 400) {
             this.logger.warn(logMessage);
         } else {
