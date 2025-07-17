@@ -25,6 +25,7 @@ export class AppLoggerService {
                 new ConsoleLogger({
                     context,
                     prefix: AppConfig.app.consolePrefix,
+                    timestamp: true,
                 }),
             );
         }

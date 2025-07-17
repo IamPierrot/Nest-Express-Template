@@ -43,6 +43,6 @@ export class AppModule implements NestModule {
         consumer
             .apply(this.rateLimitService.getMiddleware())
             .exclude('health')
-            .forRoutes('*');
+            .forRoutes('{*splat}');
     }
 }

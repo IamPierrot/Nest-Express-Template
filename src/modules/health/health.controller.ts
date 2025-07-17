@@ -9,6 +9,8 @@ import {
 import { CACHE_MANAGER, CacheInterceptor } from '@nestjs/cache-manager';
 import { Inject } from '@nestjs/common';
 import { Cache } from 'cache-manager';
+import { Logger } from '../../common/decorators/logger.decorator';
+import { LoggerService } from '@nestjs/common';
 
 @Controller('health')
 @UseInterceptors(CacheInterceptor)
@@ -30,7 +32,8 @@ export class HealthController {
      */
     @Get()
     @HealthCheck()
-    check() {
+    check(@Logger() logger: LoggerService) {
+        logger.log('Health check endpoint called');
         return this.health.check([
             () => this.http.pingCheck('nestjs-docs', 'https://docs.nestjs.com'),
             () =>
@@ -65,12 +68,14 @@ export class HealthController {
      * Uses cache to demonstrate cache manager integration
      */
     @Get('ping')
-    async ping() {
+    async ping(@Logger('HealthController.ping') logger: LoggerService) {        
         const cacheKey = 'health:ping:timestamp';
         const cachedTimestamp = await this.cacheManager.get(cacheKey);
 
         const currentTimestamp = new Date().toISOString();
         await this.cacheManager.set(cacheKey, currentTimestamp, 60);
+
+        logger.debug?.(`Cache updated with timestamp: ${currentTimestamp}`);
 
         return {
             ping: 'pong',
